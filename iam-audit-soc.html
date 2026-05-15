@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>IAM - Assistant Sécurité & Audit</title>
+    <!-- Icônes Tabler (alternative gratuite à FontAwesome) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.26.0/dist/tabler-icons.min.css">
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* RESET ET VARIABLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f7f7f8;
+            --color-border-primary: #1a1a1a;
+            --color-border-secondary: #d1d1d6;
+            --color-border-tertiary: #e9e9ef;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #6c6c70;
+            --color-text-tertiary: #8e8e93;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+            line-height: 1.4;
+        }
+
+        .iam {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--color-background-primary);
+            min-height: 100vh;
+        }
+
+        /* NAVIGATION */
+        .nav {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--color-border-tertiary);
+            background: var(--color-background-primary);
+            padding: 0 16px;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab i {
+            font-size: 18px;
+        }
+
+        .nav-tab.active {
+            color: var(--color-text-primary);
+            border-bottom-color: var(--color-text-primary);
+        }
+
+        .nav-tab:hover:not(.active) {
+            color: var(--color-text-primary);
+            background: var(--color-background-secondary);
+        }
+
+        /* VIEWS */
+        .view {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* KPI CARDS */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 20px 20px 0 20px;
+        }
+
+        .kpi {
+            background: var(--color-background-secondary);
+            border-radius: var(--border-radius-lg);
+            padding: 16px 18px;
+            border: 1px solid var(--color-border-tertiary);
+            transition: transform 0.1s ease;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-val {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            line-height: 1.2;
+        }
+
+        .kpi-sub {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            margin-top: 6px;
+        }
+
+        .kpi-r .kpi-val { color: #dc2626; }
+        .kpi-o .kpi-val { color: #ea580c; }
+        .kpi-g .kpi-val { color: #16a34a; }
+
+        /* SECTIONS */
+        .section {
+            padding: 20px;
+        }
+
+        .sec-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            background: var(--color-background-primary);
+            border: 1px solid var(--color-border-tertiary);
+            border-radius: var(--border-radius-lg);
+            padding: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        /* TABLEAU UTILISATEURS */
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .users-table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--color-text-tertiary);
+            border-bottom: 1px solid var(--color-border-tertiary);
+        }
+
+        .users-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border-tertiary);
+            color: var(--color-text-primary);
+            vertical-align: middle;
+        }
+
+        .users-table tr {
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .users-table tr:hover td {
+            background: var(--color-background-secondary);
+        }
+
+        /* BADGES ET AVATARS */
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .avatar-red { background: #fee2e2; color: #dc2626; }
+        .avatar-orange { background: #ffedd5; color: #ea580c; }
+        .avatar-blue { background: #dbeafe; color: #2563eb; }
+        .avatar-green { background: #dcfce7; color: #16a34a; }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-critical { background: #fee2e2; color: #dc2626; }
+        .badge-high { background: #ffedd5; color: #ea580c; }
+        .badge-low { background: #dbeafe; color: #2563eb; }
+        .badge-minimal { background: #dcfce7; color: #16a34a; }
+
+        /* BARRES DE PROGRES */
+        .risk-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--color-border-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* SIDEBAR + DETAILS */
+        .sidebar-shell {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 550px;
+            border: 1px solid var(--color-border-tertiary);
+            border-radius: var(--border-radius-lg);
+            margin: 20px;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: var(--color-background-secondary);
+            border-right: 1px solid var(--color-border-tertiary);
+            padding: 12px;
+        }
+
+        .user-item {
+            padding: 12px;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+            transition: all 0.1s;
+        }
+
+        .user-item:hover {
+            background: var(--color-background-primary);
+        }
+
+        .user-item.active {
+            background: var(--color-background-primary);
+            border: 1px solid var(--color-border-secondary);
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--color-text-tertiary);
+        }
+
+        .risk-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+        }
+
+        .dot-red { background: #dc2626; }
+        .dot-orange { background: #ea580c; }
+        .dot-blue { background: #2563eb; }
+        .dot-green { background: #16a34a; }
+
+        /* DETAIL PANE */
+        .detail-pane {
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--color-background-primary);
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--color-border-tertiary);
+        }
+
+        .detail-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .detail-score {
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: var(--color-background-secondary);
+            border-radius: var(--border-radius-md);
+            padding: 14px;
+        }
+
+        .info-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-text-tertiary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .perm-tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: var(--color-background-primary);
+            border: 1px solid var(--color-border-tertiary);
+            margin: 3px;
+        }
+
+        .perm-excess { background: #ffedd5; border-color: #fcd34d; color: #92400e; }
+        .perm-critical { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+
+        /* TIMELINE */
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--color-border-tertiary);
+        }
+
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        /* CHAT */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 550px;
+            border: 1px solid var(--color-border-tertiary);
+            border-radius: var(--border-radius-lg);
+            margin: 20px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--color-background-primary);
+        }
+
+        .message-ai {
+            background: var(--color-background-secondary);
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            max-width: 85%;
+            font-size: 13px;
+            border: 1px solid var(--color-border-tertiary);
+        }
+
+        .message-user {
+            background: #2563eb;
+            color: white;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            max-width: 85%;
+            margin-left: auto;
+            font-size: 13px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            border-top: 1px solid var(--color-border-tertiary);
+            background: var(--color-background-primary);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--color-border-secondary);
+            border-radius: 24px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .chat-input-area button {
+            padding: 8px 20px;
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* RAPPORT */
+        .rapport-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .policy-status {
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+
+        /* UTILS */
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+        .loading-dots span {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #6c6c70;
+            animation: blink 1.4s infinite;
+        }
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.2; }
+            40% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div class="iam">
+    <!-- NAVIGATION -->
+    <div class="nav">
+        <div class="nav-tab active" onclick="switchTab('dashboard')">
+            <i class="ti ti-layout-dashboard"></i> Vue globale
+        </div>
+        <div class="nav-tab" onclick="switchTab('users')">
+            <i class="ti ti-users"></i> Comptes & risques
+        </div>
+        <div class="nav-tab" onclick="switchTab('timeline')">
+            <i class="ti ti-history"></i> Timeline
+        </div>
+        <div class="nav-tab" onclick="switchTab('remediation')">
+            <i class="ti ti-shield-check"></i> Remédiation
+        </div>
+        <div class="nav-tab" onclick="switchTab('chat')">
+            <i class="ti ti-message-circle"></i> Analyste IA
+        </div>
+        <div class="nav-tab" onclick="switchTab('report')">
+            <i class="ti ti-file-text"></i> Rapport
+        </div>
+    </div>
+
+    <!-- VUE DASHBOARD -->
+    <div id="dashboardView" class="view active">
+        <div class="kpi-row">
+            <div class="kpi kpi-r">
+                <div class="kpi-label">Comptes à risque critique</div>
+                <div class="kpi-val" id="kpiCritical">2</div>
+                <div class="kpi-sub">Action immédiate requise</div>
+            </div>
+            <div class="kpi kpi-o">
+                <div class="kpi-label">Comptes à risque élevé</div>
+                <div class="kpi-val" id="kpiHigh">1</div>
+                <div class="kpi-sub">Surveillance renforcée</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Permissions excessives</div>
+                <div class="kpi-val" id="kpiExcessPerms">11</div>
+                <div class="kpi-sub">Sur 5 comptes analysés</div>
+            </div>
+            <div class="kpi kpi-g">
+                <div class="kpi-label">Score moyen IAM</div>
+                <div class="kpi-val" id="kpiAvgScore">54</div>
+                <div class="kpi-sub">Niveau de risque moyen</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="sec-title"><i class="ti ti-chart-bar"></i> Distribution des scores de risque</div>
+            <div class="card">
+                <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; font-size: 12px;">
+                    <span><span style="display:inline-block; width:12px; height:12px; background:#dc2626; border-radius:2px;"></span> Critique (75-100) — 2 comptes</span>
+                    <span><span style="display:inline-block; width:12px; height:12px; background:#ea580c; border-radius:2px;"></span> Élevé (50-74) — 1 compte</span>
+                    <span><span style="display:inline-block; width:12px; height:12px; background:#2563eb; border-radius:2px;"></span> Faible (10-49) — 1 compte</span>
+                    <span><span style="display:inline-block; width:12px; height:12px; background:#16a34a; border-radius:2px;"></span> Minimal (0-9) — 1 compte</span>
+                </div>
+                <canvas id="scoreChart" height="180" style="max-height: 200px; width:100%"></canvas>
+            </div>
+
+            <div class="sec-title"><i class="ti ti-alert-triangle"></i> Anomalies critiques en cours</div>
+            <div class="card">
+                <div style="margin-bottom: 12px; display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">🚨</span>
+                    <div><strong>Claire Lambert</strong> — départ dans 5 jours, compte non révoqué<br><span style="font-size:12px; color:var(--color-text-secondary)">Export de 4 200 dossiers RH détecté + connexion Dropbox</span></div>
+                </div>
+                <div style="margin-bottom: 12px; display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">🌐</span>
+                    <div><strong>Alice Dupont</strong> — impossible travel France → Allemagne en 3h<br><span style="font-size:12px; color:var(--color-text-secondary)">MFA absent, actions d'admin en pleine nuit</span></div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">⚙️</span>
+                    <div><strong>Marc Keller</strong> — push direct en production sans PR (3×)<br><span style="font-size:12px; color:var(--color-text-secondary)">API key partagée avec compte de service inconnu</span></div>
+                </div>
+            </div>
+
+            <div class="sec-title"><i class="ti ti-chart-line"></i> Évolution du risque IAM (30 derniers jours)</div>
+            <div class="card">
+                <canvas id="trendChart" height="120" style="max-height: 160px; width:100%"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- VUE COMPTES -->
+    <div id="usersView" class="view">
+        <div class="sidebar-shell">
+            <div class="sidebar" id="userSidebar"></div>
+            <div class="detail-pane" id="userDetail"></div>
+        </div>
+    </div>
+
+    <!-- VUE TIMELINE -->
+    <div id="timelineView" class="view">
+        <div class="section">
+            <div class="sec-title"><i class="ti ti-activity"></i> Chronologie des événements IAM — 7 derniers jours</div>
+            <div class="card" id="timelineList"></div>
+        </div>
+    </div>
+
+    <!-- VUE REMEDIATION -->
+    <div id="remediationView" class="view">
+        <div class="section">
+            <div class="sec-title"><i class="ti ti-list-check"></i> Plan de remédiation priorisé</div>
+            <div class="card" id="remediationList"></div>
+        </div>
+    </div>
+
+    <!-- VUE CHAT IA -->
+    <div id="chatView" class="view">
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Demandez une analyse... ex: Pourquoi Alice est critique ?">
+                <button onclick="sendChatMessage()">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VUE RAPPORT -->
+    <div id="reportView" class="view">
+        <div class="rapport-grid">
+            <div class="card">
+                <div class="info-title"><i class="ti ti-shield"></i> Conformité politique IAM</div>
+                <div id="policyCompliance"></div>
+            </div>
+            <div class="card">
+                <div class="info-title"><i class="ti ti-chart-pie"></i> Répartition du risque</div>
+                <canvas id="pieChart" height="160"></canvas>
+            </div>
+        </div>
+        <div class="section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span class="info-title"><i class="ti ti-file-description"></i> Génération du rapport d'audit IA</span>
+                    <button onclick="generateAuditReport()" id="genReportBtn" style="padding:6px 14px; border-radius:20px; border:1px solid var(--color-border-secondary); background:white; cursor:pointer;">Générer ↗</button>
+                </div>
+                <div id="reportOutput" style="background: var(--color-background-secondary); border-radius: 12px; padding: 16px; font-size:13px; line-height:1.5; display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== DONNEES SIMULEES ====================
+    const usersData = [
+        { id: 0, name: "Alice Dupont", role: "Administratrice Systèmes", initials: "AD", riskLevel: "critical", score: 88,
+          stats: { lastLogin: "Il y a 2h", logins30d: 247, offHours: 23, unusualIPs: 4, mfa: false },
+          permissions: ["root SSH", "sudo all", "DB admin", "IAM write", "S3 full (excess)", "EC2 manage (excess)", "Billing (excess)"],
+          anomalies: ["🌐 Impossible travel France→Allemagne en 3h", "🕐 47 actions admin entre 02h-04h30", "🔑 MFA désactivé depuis 18j", "📦 Export massif S3 1.2Go"],
+          context: "Admin système avec accès root, pas de MFA, comportement suspect nuit et voyage impossible." },
+        { id: 1, name: "Marc Keller", role: "Développeur Backend", initials: "MK", riskLevel: "high", score: 61,
+          stats: { lastLogin: "Aujourd'hui 09h14", logins30d: 134, offHours: 6, unusualIPs: 1, mfa: true },
+          permissions: ["Git push prod (excess)", "Docker admin (excess)", "API keys full (excess)", "S3 read", "K8s deploy"],
+          anomalies: ["⚙️ 3 push directs sur main sans PR", "🔐 API key partagée avec service inconnu", "📊 Volume API 3x supérieur"],
+          context: "Dev backend, push direct en prod, API key partagée." },
+        { id: 2, name: "Sarah Leroy", role: "Analyste BI", initials: "SL", riskLevel: "low", score: 22,
+          stats: { lastLogin: "Hier 17h45", logins30d: 89, offHours: 1, unusualIPs: 0, mfa: true },
+          permissions: ["DWH read", "Tableau", "S3 data/read", "Metabase"],
+          anomalies: ["ℹ️ Connexion un dimanche soir (activité normale)"],
+          context: "Compte BI faible risque." },
+        { id: 3, name: "Pierre Dumas", role: "Comptabilité", initials: "PD", riskLevel: "minimal", score: 9,
+          stats: { lastLogin: "Il y a 3j", logins30d: 42, offHours: 0, unusualIPs: 0, mfa: true },
+          permissions: ["ERP read", "Factures write", "Reports export"],
+          anomalies: [],
+          context: "Compte comptable risque minimal." },
+        { id: 4, name: "Claire Lambert", role: "RH (départ J-5)", initials: "CL", riskLevel: "critical", score: 92,
+          stats: { lastLogin: "Aujourd'hui 08h52", logins30d: 318, offHours: 12, unusualIPs: 2, mfa: true, departure: "J-5" },
+          permissions: ["SIRH admin (critical)", "Données RH full (critical)", "Paie export (critical)", "AWS S3 full (excess)", "Active Directory (excess)"],
+          anomalies: ["🚨 Compte actif à J-5 du départ", "📤 Export 4200 dossiers employés 1.8Go", "🔒 Accès hors périmètre cadres dirigeants", "💾 Connexion Dropbox personnel"],
+          context: "RH départ imminent, compte non révoqué, exfiltration massive." }
+    ];
+
+    const timelineEvents = [
+        { date: "Aujourd'hui 08h52", desc: "Claire Lambert — connexion IP externe + téléchargement Dropbox", level: "critical" },
+        { date: "Aujourd'hui 08h47", desc: "Alice Dupont — connexion depuis 2 IP (Paris/Berlin) < 3h", level: "critical" },
+        { date: "Hier 16h30", desc: "Marc Keller — API key copiée vers environnements non déclarés", level: "high" },
+        { date: "Hier 17h45", desc: "Sarah Leroy — connexion BI hors horaires (aucune action suspecte)", level: "low" },
+        { date: "Lundi 02h14", desc: "Alice Dupont — 47 commandes admin entre 02h-04h30", level: "critical" },
+        { date: "Jeudi 16h03", desc: "Claire Lambert — export 4200 dossiers RH (1.8Go)", level: "critical" },
+        { date: "Mercredi 09h00", desc: "Marc Keller — push direct sur branche production sans PR", level: "high" }
+    ];
+
+    const remediationPlan = [
+        { priority: "P1", action: "Désactiver immédiatement le compte Claire Lambert", owner: "IT Sécurité", deadline: "Immédiat", urgent: true },
+        { priority: "P1", action: "Activer MFA sur Alice Dupont et bloquer accès root temporaire", owner: "IT Sécurité", deadline: "Sous 2h", urgent: true },
+        { priority: "P1", action: "Analyser et révoquer exports S3/RH non autorisés, alerter DPO", owner: "RSSI + DPO", deadline: "Sous 4h", urgent: true },
+        { priority: "P2", action: "Révoquer API key partagée de Marc Keller", owner: "Dev Lead", deadline: "Aujourd'hui", urgent: false },
+        { priority: "P2", action: "Retirer droits excessifs d'Alice (S3 full, Billing, EC2 manage)", owner: "IAM Admin", deadline: "48h", urgent: false },
+        { priority: "P3", action: "Politique révocation auto J-30 avant départ", owner: "RH + IT", deadline: "2 semaines", urgent: false }
+    ];
+
+    let currentUser = 0;
+    let chartScore, chartTrend, chartPie;
+
+    // Helper
+    function updateKPIs() {
+        document.getElementById('kpiCritical').innerText = usersData.filter(u => u.riskLevel === 'critical').length;
+        document.getElementById('kpiHigh').innerText = usersData.filter(u => u.riskLevel === 'high').length;
+        const excessCount = usersData.reduce((sum, u) => sum + u.permissions.filter(p => p.includes('excess') || p.includes('critical')).length, 0);
+        document.getElementById('kpiExcessPerms').innerText = excessCount;
+        const avgScore = Math.round(usersData.reduce((s,u) => s + u.score, 0) / usersData.length);
+        document.getElementById('kpiAvgScore').innerText = avgScore;
+    }
+
+    function renderUserSidebar() {
+        const sidebar = document.getElementById('userSidebar');
+        sidebar.innerHTML = '<div style="font-size:10px; font-weight:600; color:var(--color-text-tertiary); margin-bottom:12px;">COMPTES</div>';
+        usersData.forEach((u, idx) => {
+            const dotClass = u.riskLevel === 'critical' ? 'dot-red' : (u.riskLevel === 'high' ? 'dot-orange' : (u.riskLevel === 'low' ? 'dot-blue' : 'dot-green'));
+            sidebar.innerHTML += `
+                <div class="user-item ${idx === currentUser ? 'active' : ''}" onclick="selectUser(${idx})">
+                    <div class="avatar avatar-${u.riskLevel === 'critical' ? 'red' : (u.riskLevel === 'high' ? 'orange' : (u.riskLevel === 'low' ? 'blue' : 'green'))}">${u.initials}</div>
+                    <div><div class="user-name">${u.name}</div><div class="user-role">${u.role}</div></div>
+                    <div class="risk-dot ${dotClass}"></div>
+                </div>
+            `;
+        });
+    }
+
+    function renderUserDetail(user) {
+        const detailDiv = document.getElementById('userDetail');
+        const riskColor = user.riskLevel === 'critical' ? '#dc2626' : (user.riskLevel === 'high' ? '#ea580c' : (user.riskLevel === 'low' ? '#2563eb' : '#16a34a'));
+        const badgeClass = `badge-${user.riskLevel === 'critical' ? 'critical' : (user.riskLevel === 'high' ? 'high' : (user.riskLevel === 'low' ? 'low' : 'minimal'))}`;
+        const riskLabel = user.riskLevel === 'critical' ? 'Critique' : (user.riskLevel === 'high' ? 'Élevé' : (user.riskLevel === 'low' ? 'Faible' : 'Minimal'));
+        
+        detailDiv.innerHTML = `
+            <div class="detail-header">
+                <div class="detail-avatar avatar-${user.riskLevel === 'critical' ? 'red' : (user.riskLevel === 'high' ? 'orange' : (user.riskLevel === 'low' ? 'blue' : 'green'))}" style="font-size:22px;">${user.initials}</div>
+                <div style="flex:1"><h3 style="margin-bottom:4px">${user.name}</h3><div style="color:var(--color-text-secondary); font-size:13px;">${user.role}</div></div>
+                <div><span class="detail-score" style="color:${riskColor}">${user.score}</span><div><span class="badge ${badgeClass}" style="margin-top:5px; display:inline-block;">${riskLabel}</span></div></div>
+            </div>
+            <div class="stats-grid">
+                <div class="info-card">
+                    <div class="info-title"><i class="ti ti-user-circle"></i> Compte</div>
+                    <div class="stat-row"><span>Dernière connexion</span><strong>${user.stats.lastLogin}</strong></div>
+                    <div class="stat-row"><span>Connexions (30j)</span><strong>${user.stats.logins30d}</strong></div>
+                    <div class="stat-row"><span>Hors horaires</span><strong>${user.stats.offHours} fois</strong></div>
+                    <div class="stat-row"><span>IP inhabituelles</span><strong>${user.stats.unusualIPs}</strong></div>
+                    <div class="stat-row"><span>MFA</span><strong>${user.stats.mfa ? '✅ Activé' : '❌ Non'}</strong></div>
+                </div>
+                <div class="info-card">
+                    <div class="info-title"><i class="ti ti-key"></i> Permissions sensibles</div>
+                    <div>${user.permissions.map(p => `<span class="perm-tag ${p.includes('excess') ? 'perm-excess' : (p.includes('critical') ? 'perm-critical' : '')}">${p}</span>`).join('')}</div>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-title"><i class="ti ti-alert-circle"></i> Anomalies détectées</div>
+                ${user.anomalies.length ? user.anomalies.map(a => `<div style="margin-bottom:8px; font-size:13px;">${a}</div>`).join('') : '<div>Aucune anomalie.</div>'}
+            </div>
+        `;
+    }
+
+    function renderTimeline() {
+        const container = document.getElementById('timelineList');
+        container.innerHTML = timelineEvents.map(ev => `
+            <div class="timeline-item">
+                <div class="timeline-dot ${ev.level === 'critical' ? 'dot-red' : (ev.level === 'high' ? 'dot-orange' : 'dot-blue')}" style="background:${ev.level === 'critical' ? '#dc2626' : (ev.level === 'high' ? '#ea580c' : '#2563eb')}"></div>
+                <div><div style="font-size:11px; color:var(--color-text-tertiary)">${ev.date}</div><div style="font-size:13px;">${ev.desc}</div></div>
+            </div>
+        `).join('');
+    }
+
+    function renderRemediation() {
+        const container = document.getElementById('remediationList');
+        container.innerHTML = remediationPlan.map(r => `
+            <div style="background:${r.urgent ? '#fee2e2' : '#f7f7f8'}; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:700; font-size:14px; color:${r.urgent ? '#dc2626' : '#ea580c'}">${r.priority}</span>
+                <div style="flex:1"><strong>${r.action}</strong><div style="font-size:11px; color:var(--color-text-secondary)">Propriétaire: ${r.owner} · Délai: ${r.deadline}</div></div>
+                <span style="font-size:11px; background:white; padding:2px 10px; border-radius:20px;">${r.urgent ? 'URGENT' : 'À faire'}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderPolicyCompliance() {
+        const policies = [
+            { name: "MFA obligatoire pour admins", status: "ok", desc: "4/5 ✓" },
+            { name: "Revue accès trimestrielle", status: "ko", desc: "Non fait" },
+            { name: "Révocation à J-30 avant départ", status: "ko", desc: "0/1 ✗" },
+            { name: "Principe moindre privilège", status: "warn", desc: "2/5 non-conformes" }
+        ];
+        const container = document.getElementById('policyCompliance');
+        container.innerHTML = policies.map(p => `
+            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--color-border-tertiary);">
+                <span>${p.name}</span>
+                <span class="policy-status" style="background:${p.status === 'ok' ? '#dcfce7' : (p.status === 'ko' ? '#fee2e2' : '#ffedd5')}; color:${p.status === 'ok' ? '#16a34a' : (p.status === 'ko' ? '#dc2626' : '#ea580c')}">${p.desc}</span>
+            </div>
+        `).join('');
+    }
+
+    function selectUser(id) {
+        currentUser = id;
+        renderUserSidebar();
+        renderUserDetail(usersData[currentUser]);
+    }
+
+    // Graphiques
+    function initCharts() {
+        const ctxScore = document.getElementById('scoreChart').getContext('2d');
+        chartScore = new Chart(ctxScore, {
+            type: 'bar',
+            data: { labels: usersData.map(u => u.name.split(' ')[0]), datasets: [{ label: 'Score risque', data: usersData.map(u => u.score), backgroundColor: ['#dc2626', '#ea580c', '#2563eb', '#16a34a', '#dc2626'], borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { max: 100, grid: { color: '#e5e5ea' } } } }
+        });
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        chartTrend = new Chart(ctxTrend, {
+            type: 'line',
+            data: { labels: ['S-4', 'S-3', 'S-2', 'S-1', 'Cette semaine'], datasets: [{ label: 'Score moyen', data: [38,42,45,49,54], borderColor: '#dc2626', tension: 0.3, fill: true, backgroundColor: 'rgba(220,38,38,0.05)' }] },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        const ctxPie = document.getElementById('pieChart').getContext('2d');
+        const riskCounts = [usersData.filter(u=>u.riskLevel==='critical').length, usersData.filter(u=>u.riskLevel==='high').length, usersData.filter(u=>u.riskLevel==='low').length, usersData.filter(u=>u.riskLevel==='minimal').length];
+        chartPie = new Chart(ctxPie, { type: 'doughnut', data: { labels: ['Critique','Élevé','Faible','Minimal'], datasets: [{ data: riskCounts, backgroundColor: ['#dc2626','#ea580c','#2563eb','#16a34a'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
+    }
+
+    // IA Simulée (pas de clé API requise pour le POC - version démo)
+    async function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+        const chatDiv = document.getElementById('chatMessages');
+        chatDiv.innerHTML += `<div class="message-user">${msg}</div>`;
+        input.value = '';
+        chatDiv.innerHTML += `<div class="message-ai" id="loadingMsg"><div class="loading-dots"><span></span><span></span><span></span></div> Analyse en cours...</div>`;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+        
+        setTimeout(() => {
+            document.getElementById('loadingMsg')?.remove();
+            let response = "🔍 **Analyse IAM**\n\n";
+            if (msg.toLowerCase().includes('alice')) {
+                response += "Alice Dupont (score 88 - Critique) :\n- MFA absent (violation politique)\n- Impossible travel France-Allemagne en 3h\n- 47 actions admin hors horaires\n- Recommandation : Activer MFA immédiatement et révoquer accès root temporaire.";
+            } else if (msg.toLowerCase().includes('claire')) {
+                response += "Claire Lambert (score 92 - Critique) :\n- Compte actif à J-5 du départ\n- Export de 4200 dossiers RH (1.8Go)\n- Connexion Dropbox détectée\n- Recommandation : Désactivation immédiate + alerte DPO.";
+            } else if (msg.toLowerCase().includes('risque')) {
+                response += "Top 3 risques critiques :\n1. Claire Lambert (exfiltration RH)\n2. Alice Dupont (MFA + impossible travel)\n3. Marc Keller (push prod sans PR + API key partagée)";
+            } else {
+                response += "Résumé IAM : 2 comptes critiques, 1 élevé. Actions prioritaires : désactiver compte Claire Lambert, MFA sur Alice, audit des exports S3.";
+            }
+            chatDiv.innerHTML += `<div class="message-ai">${response.replace(/\n/g,'<br>')}</div>`;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }, 800);
+    }
+
+    async function generateAuditReport() {
+        const btn = document.getElementById('genReportBtn');
+        const outputDiv = document.getElementById('reportOutput');
+        btn.innerText = 'Génération...';
+        outputDiv.style.display = 'block';
+        outputDiv.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div> Génération du rapport IA...';
+        
+        setTimeout(() => {
+            outputDiv.innerHTML = `
+                <strong>📋 RAPPORT D'AUDIT IAM</strong><br><br>
+                <strong>1. Résumé exécutif</strong><br>
+                5 comptes audités, 2 critiques, 1 élevé. Score moyen 54 (+16 points en 30 jours).<br><br>
+                <strong>2. Anomalies majeures</strong><br>
+                - Exfiltration RH par Claire Lambert (compte départ non révoqué)<br>
+                - Impossible travel + MFA absent pour Alice Dupont<br>
+                - Push direct prod et API key partagée pour Marc Keller<br><br>
+                <strong>3. Recommandations prioritaires</strong><br>
+                ✅ Désactiver Claire Lambert (P1)<br>
+                ✅ Activer MFA Alice Dupont (P1)<br>
+                ✅ Révoquer API key Marc Keller (P2)<br>
+                ✅ Imposer PR obligatoire pour tous les pushes (P3)
+            `;
+            btn.innerText = 'Rapport généré ✓';
+        }, 1200);
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        if (tabName === 'dashboard') document.getElementById('dashboardView').classList.add('active');
+        else if (tabName === 'users') document.getElementById('usersView').classList.add('active');
+        else if (tabName === 'timeline') document.getElementById('timelineView').classList.add('active');
+        else if (tabName === 'remediation') document.getElementById('remediationView').classList.add('active');
+        else if (tabName === 'chat') document.getElementById('chatView').classList.add('active');
+        else if (tabName === 'report') document.getElementById('reportView').classList.add('active');
+        document.querySelectorAll('.nav-tab')[['dashboard','users','timeline','remediation','chat','report'].indexOf(tabName)].classList.add('active');
+    }
+
+    // Initialisation
+    updateKPIs();
+    renderUserSidebar();
+    renderUserDetail(usersData[0]);
+    renderTimeline();
+    renderRemediation();
+    renderPolicyCompliance();
+    initCharts();
+</script>
+</body>
+</html>
